@@ -1,0 +1,10 @@
+# User credentials - never commit
+Settings.inc
+
+# Auto-generated files
+GrassView.ini
+debug.log
+
+# Dev history & local config
+HISTORY.md
+.claude

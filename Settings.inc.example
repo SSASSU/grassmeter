@@ -1,0 +1,30 @@
+; =====================================================
+;  GitHub Grass - Settings.inc
+;  Copy this file to Settings.inc and fill in your info
+; =====================================================
+
+[Variables]
+
+; ── Required ──────────────────────────────────────────────────────
+GitHubUsername=your_github_username
+GitHubToken=ghp_xxxxxxxxxxxxxxxxxxxx
+
+; ── Color Theme ───────────────────────────────────────────────────
+; Options: Green / Purple / Blue / Red / Orange / Pink / Mono
+ColorTheme=Green
+
+; ── Size ──────────────────────────────────────────────────────────
+; Cell size in pixels (recommended: 10-14)
+CellSize=11
+; Gap between cells (recommended: 2-3)
+CellGap=2
+; Widget outer padding
+Padding=14
+
+; ── Period ────────────────────────────────────────────────────────
+; Weeks to display (52 = 1 year, 26 = 6 months)
+WeeksToShow=52
+
+; ── Opacity ───────────────────────────────────────────────────────
+; Background opacity (0 = transparent, 255 = solid)
+Opacity=220
