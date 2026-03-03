@@ -4,8 +4,9 @@
 #  Fetches GitHub contribution data and generates GrassView.ini
 # =============================================================
 param(
-    [string]$SkinPath  = '',
-    [string]$OutputIni = ''
+    [string]$SkinPath     = '',
+    [string]$OutputIni    = '',
+    [int]$WeeksOverride   = 0
 )
 
 if (-not $SkinPath)  { $SkinPath  = Split-Path -Parent $MyInvocation.MyCommand.Path }
@@ -40,6 +41,17 @@ if (Test-Path $sf) {
     L 'WARNING: Settings.inc not found, using defaults'
 }
 L "Username=$Username  Weeks=$Weeks  Theme=$Theme  CellSize=$CellSize"
+
+# Apply WeeksOverride and persist to Settings.inc
+if ($WeeksOverride -gt 0) {
+    $Weeks = $WeeksOverride
+    if (Test-Path $sf) {
+        $sfc = [System.IO.File]::ReadAllText($sf, [System.Text.UTF8Encoding]::new($true))
+        $sfc = $sfc -replace 'WeeksToShow=\d+', ('WeeksToShow=' + $Weeks)
+        [System.IO.File]::WriteAllText($sf, $sfc, [System.Text.UTF8Encoding]::new($true))
+        L "WeeksOverride=$Weeks (Settings.inc updated)"
+    }
+}
 
 if ($Username -eq '' -or $Username -eq 'your_username') { L 'ERROR: GitHubUsername not set'; exit 1 }
 if ($Token    -eq '' -or $Token    -eq 'ghp_your_token_here') { L 'ERROR: GitHubToken not set'; exit 1 }
@@ -94,16 +106,34 @@ L "Max daily commits=$Max"
 # ------------------------------------------------------------------
 # Layout calculations
 # ------------------------------------------------------------------
-$Step   = $CellSize + $CellGap
-$DLW    = 28
-$MonthH = 20
-$TotalH = 22
-$GW     = $Weeks * $Step - $CellGap
-$GH     = 7 * $Step - $CellGap
-$WW     = $Padding * 2 + $DLW + $GW
-$WH     = $Padding * 2 + $MonthH + $GH + $TotalH
-$OX     = $Padding + $DLW
-$OY     = $Padding + $MonthH
+$Step    = $CellSize + $CellGap
+$DLW     = 28
+$MonthH  = 20
+$TotalH  = 22
+$BtnRowH = 24
+$GW      = $Weeks * $Step - $CellGap
+$GH      = 7 * $Step - $CellGap
+$WW      = $Padding * 2 + $DLW + $GW
+$WH      = $Padding * 2 + $MonthH + $GH + $TotalH + $BtnRowH
+$OX      = $Padding + $DLW
+$OY      = $Padding + $MonthH
+
+# Period selector
+$Periods = @(
+    @{label='1W'; weeks=1},
+    @{label='1M'; weeks=4},
+    @{label='3M'; weeks=13},
+    @{label='6M'; weeks=26},
+    @{label='1Y'; weeks=52}
+)
+$PBtnW   = 26
+$PBtnGap = 6
+$PTotalW = $Periods.Count * $PBtnW + ($Periods.Count - 1) * $PBtnGap
+
+# Ensure widget is wide enough for period buttons
+$MinWW = $Padding * 2 + $DLW + $PTotalW + 20
+if ($WW -lt $MinWW) { $WW = $MinWW }
+
 L "Widget size: ${WW}x${WH}"
 
 # Build grid (col=week, row=weekday 0=Sun)
@@ -157,6 +187,18 @@ W ("Program=" + $SkinPath + "\run.bat")
 W "State=0"
 W "FinishAction=[!Refresh]"
 W ""
+
+# Period selector measures
+foreach ($p in $Periods) {
+    $pl = $p.label; $pw = $p.weeks
+    W ("[MeasurePeriod" + $pl + "]")
+    W "Measure=Plugin"
+    W "Plugin=RunCommand"
+    W ("Program=powershell.exe -ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"" + $SkinPath + "\FetchAndBuild.ps1`" -SkinPath `"" + $SkinPath + "`" -WeeksOverride " + $pw)
+    W "State=0"
+    W "FinishAction=[!Refresh]"
+    W ""
+}
 
 # Background
 W "[MeterBG]"
@@ -251,6 +293,36 @@ W "FontSize=8"
 W "FontFace=Segoe UI"
 W "AntiAlias=1"
 W ""
+
+# Period buttons (right-aligned, below total text)
+$bby = $OY + $GH + $TotalH + 4
+$bbx = $WW - $Padding - $PTotalW
+$pi  = 0
+foreach ($p in $Periods) {
+    $pl  = $p.label; $pw = $p.weeks
+    $bxi = $bbx + $pi * ($PBtnW + $PBtnGap)
+    $isAct  = ($pw -eq $Weeks)
+    $fclr   = if ($isAct) { '220,220,220,255' } else { '88,96,105,180' }
+    $bstyle = if ($isAct) { 'Bold' } else { 'Normal' }
+
+    W ("[MBtnP" + $pl + "]")
+    W "Meter=String"
+    W "X=$bxi"
+    W "Y=$bby"
+    W "W=$PBtnW"
+    W "H=$BtnRowH"
+    W "Text=$pl"
+    W "FontColor=$fclr"
+    W "FontSize=8"
+    W "FontFace=Segoe UI"
+    W "AntiAlias=1"
+    W "StringAlign=Center"
+    W "StringStyle=$bstyle"
+    W ("LeftMouseUpAction=[!CommandMeasure MeasurePeriod" + $pl + " 'Run']")
+    W ("ToolTipText=Show contributions for last " + $pl)
+    W ""
+    $pi++
+}
 
 # Refresh button
 $rx = $WW - $Padding - 18
