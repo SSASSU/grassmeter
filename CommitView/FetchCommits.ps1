@@ -67,11 +67,12 @@ foreach ($repo in @($Repo1, $Repo2, $Repo3)) {
         $url     = 'https://api.github.com/repos/' + $repo + '/commits?per_page=10'
         $commits = Invoke-RestMethod -Uri $url -Headers $Headers -ErrorAction Stop
         $name    = ($repo -split '/')[1]
-        $ghUrl   = 'https://github.com/' + $repo
+        $ghBase  = 'https://github.com/' + $repo
         foreach ($c in $commits) {
             $msg = ($c.commit.message -split "`n")[0].Trim()
             $rel = Get-RelativeTime $c.commit.author.date
-            $Rows.Add(@{ name=$name; msg=$msg; time=$rel; url=$ghUrl })
+            $commitUrl = $ghBase + '/commit/' + $c.sha
+            $Rows.Add(@{ name=$name; msg=$msg; time=$rel; url=$commitUrl })
         }
         L "  OK  $($commits.Count) commits"
     } catch {
@@ -85,20 +86,23 @@ L ("Total rows: " + $Rows.Count)
 # Layout constants
 # ------------------------------------------------------------------
 $WW        = 500
+$HeaderH   = 32
 $Padding   = 14
+$RowPadT   = 8     # 헤더 아래 상단 패딩
+$RowPadB   = 8     # 하단 패딩
 $RowH      = 24
 $RepoColW  = 110
 $MsgColX   = 132   # Padding + RepoColW + 8
 $TimeColW  = 68
 $TimeColX  = $WW - $Padding - $TimeColW   # = 418 (우측 고정)
 $MsgColW   = $TimeColX - $MsgColX - 24   # gap 24px → = 262
-$BtnAreaH  = 28
 
 $activeRows = $Rows.Count
-$WH = $Padding * 2 + $activeRows * $RowH + $BtnAreaH
+$WH = $HeaderH + $RowPadT + $activeRows * $RowH + $RowPadB
 
 $cBG     = '13,17,23,240'
 $cStroke = '48,54,61,255'
+$cBlue   = '55,115,185,255'
 
 # ------------------------------------------------------------------
 # Generate CommitView.ini
@@ -125,6 +129,30 @@ W 'Y=0'
 W ('Shape=Rectangle 0,0,' + $WW + ',' + $WH + ',8 | Fill Color ' + $cBG + ' | StrokeWidth 1 | Stroke Color ' + $cStroke)
 W ''
 
+# Header bar
+W '[MeterHeader]'
+W 'Meter=Shape'
+W 'X=0'
+W 'Y=0'
+W ('Shape=Rectangle 0,0,' + $WW + ',' + $HeaderH + ',8,0,0,0 | Fill Color ' + $cBlue + ' | StrokeWidth 0')
+W ''
+
+# Header label  (StringAlign 없이 수동 Y 중앙 배치)
+$headerLabelY = [int](($HeaderH - 11) / 2)   # FontSize=8 Segoe UI ≈ 11px
+W '[MHeaderLabel]'
+W 'Meter=String'
+W "X=$Padding"
+W "Y=$headerLabelY"
+W 'W=200'
+W 'H=20'
+W 'Text=COMMITS'
+W 'FontColor=255,255,255,220'
+W 'FontSize=8'
+W 'FontFace=Segoe UI'
+W 'FontWeight=700'
+W 'AntiAlias=1'
+W ''
+
 # Commit rows
 $prevName = ''
 for ($i = 0; $i -lt $Rows.Count; $i++) {
@@ -132,7 +160,7 @@ for ($i = 0; $i -lt $Rows.Count; $i++) {
     $name   = $row.name
     $msg    = $row.msg
     $time   = $row.time
-    $y      = $Padding + $i * $RowH
+    $y      = $HeaderH + $RowPadT + $i * $RowH
     $action = '["' + $row.url + '"]'
 
     # Dim repeated repo names for visual grouping
@@ -194,18 +222,31 @@ if ($AutoRefreshMin -ge 1) {
     W ''
 }
 
-# Refresh button (bottom right)
-$ry = $Padding + $activeRows * $RowH + [int](($BtnAreaH - 18) / 2)
-W '[MRefresh]'
+# Refresh button - Shape circle + R label
+$btnCX = $WW - $Padding - 8   # 원 중심 X
+$btnCY = [int]($HeaderH / 2)  # 원 중심 Y (헤더 수직 중앙)
+W '[MRefreshBtn]'
+W 'Meter=Shape'
+W "X=$($btnCX - 8)"
+W "Y=$($btnCY - 8)"
+W 'W=16'
+W 'H=16'
+W ('Shape=Ellipse 8,8,7 | Fill Color 255,255,255,30 | StrokeWidth 1 | Stroke Color 255,255,255,120')
+W ('LeftMouseUpAction=["wscript.exe" "#CURRENTPATH#launcher_commits.vbs"]')
+W 'ToolTipText=Click to reload commits'
+W 'MouseOverAction=[!SetOption MRefreshBtn Shape "Ellipse 8,8,7 | Fill Color 255,255,255,60 | StrokeWidth 1 | Stroke Color 255,255,255,180"][!UpdateMeter MRefreshBtn][!Redraw]'
+W 'MouseLeaveAction=[!SetOption MRefreshBtn Shape "Ellipse 8,8,7 | Fill Color 255,255,255,30 | StrokeWidth 1 | Stroke Color 255,255,255,120"][!UpdateMeter MRefreshBtn][!Redraw]'
+W ''
+W '[MRefreshLabel]'
 W 'Meter=String'
-W 'X=472'
-W "Y=$ry"
-W 'W=14'
-W 'H=18'
-W 'Text=R'
-W 'FontColor=88,96,105,200'
-W 'FontSize=9'
-W 'FontFace=Segoe UI'
+W "X=$($btnCX - 4)"
+W "Y=$($btnCY - 5)"
+W 'W=10'
+W 'H=12'
+W ('Text=' + [char]0xE5D5)
+W 'FontColor=255,255,255,200'
+W 'FontSize=14'
+W 'FontFace=Material Icons'
 W 'AntiAlias=1'
 W ('LeftMouseUpAction=["wscript.exe" "#CURRENTPATH#launcher_commits.vbs"]')
 W 'ToolTipText=Click to reload commits'
