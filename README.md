@@ -127,17 +127,28 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 ```
 grassmeter\
-├── Settings.inc          ← All configuration (GrassView + CommitView)
-├── FetchAndBuild.ps1     ← GrassView: fetcher + INI generator
-├── FetchCommits.ps1      ← CommitView: fetcher + INI generator
-├── run.bat               ← GrassView: run to generate widget
-├── run_commits.bat       ← CommitView: run to generate widget
-├── launcher.vbs          ← GrassView: silent background launcher
-├── launcher_commits.vbs  ← CommitView: silent background launcher
-├── GrassView.ini         ← Auto-generated (do not edit)
-├── CommitView.ini        ← Auto-generated (do not edit)
-├── debug.log             ← Auto-generated (GrassView errors)
-└── debug_commits.log     ← Auto-generated (CommitView errors)
+├── Settings.inc              ← All configuration (GrassView + CommitView)
+├── Settings.inc.example      ← Template — copy and fill in credentials
+│
+├── GrassView\
+│   ├── FetchAndBuild.ps1     ← Fetches GitHub API + generates GrassView.ini
+│   ├── launcher.vbs          ← Silent background launcher
+│   ├── run.bat               ← Manual run to generate widget
+│   ├── SetPeriod.bat         ← Period switch (called with weeks as argument)
+│   ├── SetPeriod_1W.bat      ← Shortcut: 1-week view
+│   ├── SetPeriod_1M.bat      ← Shortcut: 4-week view
+│   ├── SetPeriod_3M.bat      ← Shortcut: 13-week view
+│   ├── SetPeriod_6M.bat      ← Shortcut: 26-week view
+│   ├── SetPeriod_1Y.bat      ← Shortcut: 52-week view (default)
+│   ├── GrassView.ini         ← Auto-generated (do not edit)
+│   └── debug.log             ← Auto-generated (GrassView errors)
+│
+└── CommitView\
+    ├── FetchCommits.ps1      ← Fetches GitHub API + generates CommitView.ini
+    ├── launcher_commits.vbs  ← Silent background launcher
+    ├── run_commits.bat       ← Manual run to generate widget
+    ├── CommitView.ini        ← Auto-generated (do not edit)
+    └── debug_commits.log     ← Auto-generated (CommitView errors)
 ```
 
 ---

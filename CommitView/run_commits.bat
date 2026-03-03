@@ -8,9 +8,9 @@ echo Running... (may take ~5 seconds)
 echo.
 powershell.exe -ExecutionPolicy Bypass -NoProfile -NonInteractive -File "%~dp0FetchCommits.ps1"
 echo.
-if exist "%~dp0CommitView\CommitView.ini" (
-    echo [OK] CommitView\CommitView.ini created!
-    echo Load CommitView\CommitView.ini in Rainmeter.
+if exist "%~dp0CommitView.ini" (
+    echo [OK] CommitView.ini created!
+    echo Load grassmeter\CommitView\CommitView.ini in Rainmeter.
 ) else (
     echo [FAIL] Check debug_commits.log for errors.
 )

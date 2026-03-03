@@ -25,7 +25,7 @@ L '=== GitHub Grass v1.0 ==='
 $Username = ''; $Token = ''; $Weeks = 52; $CellSize = 11
 $CellGap  = 2;  $Padding = 14; $Theme = 'Green'
 
-$sf = Join-Path $SkinPath 'Settings.inc'
+$sf = Join-Path (Split-Path $SkinPath -Parent) 'Settings.inc'
 if (Test-Path $sf) {
     foreach ($line in [System.IO.File]::ReadAllLines($sf, [System.Text.UTF8Encoding]::new($true))) {
         if ($line -match '^GitHubUsername\s*=\s*(.+)$') { $Username = $Matches[1].Trim() }
@@ -328,7 +328,7 @@ $content = [string]::Join("`r`n", $lines)
 L ("Saved: " + $OutputIni + "  cells=" + $idx)
 
 # Trigger Rainmeter skin refresh automatically
-$config  = Split-Path $SkinPath -Leaf
+$config  = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
 $iniFile = [System.IO.Path]::GetFileName($OutputIni)
 $rmExe   = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
 if (-not (Test-Path $rmExe)) { $rmExe = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }

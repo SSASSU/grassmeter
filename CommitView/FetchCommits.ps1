@@ -21,7 +21,7 @@ $OutputIni = Join-Path $SkinPath 'CommitView.ini'
 # ------------------------------------------------------------------
 $Token = ''; $Repo1 = ''; $Repo2 = ''; $Repo3 = ''; $AutoRefreshMin = 0
 
-$sf = Join-Path $SkinPath 'Settings.inc'
+$sf = Join-Path (Split-Path $SkinPath -Parent) 'Settings.inc'
 if (Test-Path $sf) {
     foreach ($line in [System.IO.File]::ReadAllLines($sf, [System.Text.UTF8Encoding]::new($true))) {
         if ($line -match '^GitHubToken\s*=\s*(.+)$')      { $Token          = $Matches[1].Trim() }
@@ -221,7 +221,7 @@ L ('Saved: ' + $OutputIni + '  rows=' + $activeRows + '  WH=' + $WH)
 # ------------------------------------------------------------------
 # Trigger Rainmeter skin refresh
 # ------------------------------------------------------------------
-$config  = Split-Path $SkinPath -Leaf
+$config  = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
 $iniFile = 'CommitView.ini'
 $rmExe   = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
 if (-not (Test-Path $rmExe)) { $rmExe = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }
