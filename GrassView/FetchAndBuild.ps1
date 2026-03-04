@@ -305,8 +305,8 @@ foreach ($p in $Periods) {
     $pi++
 }
 
-$iconGear    = [char]0x2699   # ⚙
-$iconRefresh = [char]0x21BB   # ↻
+$iconGear    = [char]0xE8B8   # Material Icons: settings
+$iconRefresh = [char]0xE5D5   # Material Icons: refresh
 
 # Settings button
 $sx = $WW - $Padding - 20 - 26
@@ -318,8 +318,8 @@ W "W=20"
 W "H=$MonthH"
 W "Text=$iconGear"
 W "FontColor=88,96,105,200"
-W "FontSize=12"
-W "FontFace=Segoe UI Symbol"
+W "FontSize=14"
+W "FontFace=Material Icons"
 W "AntiAlias=1"
 W "LeftMouseUpAction=[`"wscript.exe`" `"#ROOTCONFIGPATH#launch_settings.vbs`"]"
 W "ToolTipText=Open Settings"
@@ -335,8 +335,8 @@ W "W=20"
 W "H=$MonthH"
 W "Text=$iconRefresh"
 W "FontColor=88,96,105,200"
-W "FontSize=12"
-W "FontFace=Segoe UI Symbol"
+W "FontSize=14"
+W "FontFace=Material Icons"
 W "AntiAlias=1"
 W "LeftMouseUpAction=[`"wscript.exe`" `"#CURRENTPATH#launcher.vbs`"]"
 W "ToolTipText=Click to reload (applies Settings.inc changes)"
