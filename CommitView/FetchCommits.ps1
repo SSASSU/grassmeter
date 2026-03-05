@@ -88,12 +88,19 @@ foreach ($repo in @($Repo1, $Repo2, $Repo3)) {
 
 L ("Total rows: " + $Rows.Count)
 
+# Guard: if no rows fetched (all repos failed), keep existing INI unchanged
+if ($Rows.Count -eq 0) {
+    L 'WARNING: No rows fetched - keeping existing CommitView.ini unchanged'
+    L '=== DONE (no update) ==='
+    exit 0
+}
+
 # ------------------------------------------------------------------
 # Layout constants
 # ------------------------------------------------------------------
 $WW        = 500
 $Padding   = 14
-$RowH      = 24
+$RowH      = 26
 $RepoColW  = 110
 $MsgColX   = 132   # Padding + RepoColW + 8
 $TimeColW  = 68
@@ -154,7 +161,7 @@ for ($i = 0; $i -lt $Rows.Count; $i++) {
     W "H=$RowH"
     W "Text=$name"
     W "FontColor=$nameColor"
-    W 'FontSize=9'
+    W 'FontSize=10'
     W 'FontFace=Segoe UI'
     W 'AntiAlias=1'
     W 'ClipString=2'
@@ -169,7 +176,7 @@ for ($i = 0; $i -lt $Rows.Count; $i++) {
     W "H=$RowH"
     W "Text=$msg"
     W 'FontColor=139,148,158,255'
-    W 'FontSize=9'
+    W 'FontSize=10'
     W 'FontFace=Segoe UI'
     W 'AntiAlias=1'
     W 'ClipString=2'
@@ -184,7 +191,7 @@ for ($i = 0; $i -lt $Rows.Count; $i++) {
     W "H=$RowH"
     W "Text=$time"
     W 'FontColor=88,96,105,200'
-    W 'FontSize=8'
+    W 'FontSize=9'
     W 'FontFace=Segoe UI'
     W 'AntiAlias=1'
     W "LeftMouseUpAction=$action"

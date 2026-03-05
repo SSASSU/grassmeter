@@ -108,9 +108,9 @@ L "Max daily commits=$Max"
 # ------------------------------------------------------------------
 $Step    = $CellSize + $CellGap
 $DLW     = 28
-$MonthH  = 20
-$TotalH  = 22
-$BtnRowH = 24
+$MonthH  = 22
+$TotalH  = 24
+$BtnRowH = 26
 $GW      = $Weeks * $Step - $CellGap
 $GH      = 7 * $Step - $CellGap
 $WW      = $Padding * 2 + $DLW + $GW
@@ -203,7 +203,7 @@ foreach ($c in ($ML.Keys | Sort-Object { [int]$_ })) {
     W "H=$MonthH"
     W ("Text=" + $ML[$c])
     W "FontColor=139,148,158,255"
-    W "FontSize=8"
+    W "FontSize=9"
     W "FontFace=Segoe UI"
     W "AntiAlias=1"
     W ""
@@ -222,7 +222,7 @@ for ($r = 0; $r -lt 7; $r++) {
     W ("H=" + ($CellSize + 2))
     W ("Text=" + $DayNames[$r])
     W "FontColor=139,148,158,255"
-    W "FontSize=7"
+    W "FontSize=8"
     W "FontFace=Segoe UI"
     W "AntiAlias=1"
     W ""
@@ -272,7 +272,7 @@ W "W=$GW"
 W "H=$TotalH"
 W ("Text=" + $Total + " contributions in the last " + $Weeks + " weeks")
 W "FontColor=139,148,158,255"
-W "FontSize=8"
+W "FontSize=10"
 W "FontFace=Segoe UI"
 W "AntiAlias=1"
 W ""
@@ -296,7 +296,7 @@ foreach ($p in $Periods) {
     W "H=$BtnRowH"
     W "Text=$pl"
     W "FontColor=$fclr"
-    W "FontSize=8"
+    W "FontSize=9"
     W "FontFace=Segoe UI"
     W "AntiAlias=1"
     W "StringAlign=Center"
@@ -352,7 +352,7 @@ W "W=$legTW"
 W "H=$($LegendH - 4)"
 W "Text=Less"
 W "FontColor=88,96,105,180"
-W "FontSize=7"
+W "FontSize=8"
 W "FontFace=Segoe UI"
 W "AntiAlias=1"
 W "StringAlign=Right"
@@ -378,7 +378,7 @@ W "W=$legTW"
 W "H=$($LegendH - 4)"
 W "Text=More"
 W "FontColor=88,96,105,180"
-W "FontSize=7"
+W "FontSize=8"
 W "FontFace=Segoe UI"
 W "AntiAlias=1"
 W ""
