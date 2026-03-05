@@ -69,7 +69,7 @@ $successCount    = 0
 foreach ($repo in $configuredRepos) {
     L "Fetching: $repo"
     try {
-        $url  = 'https://api.github.com/repos/' + $repo + '/commits?per_page=10'
+        $url  = 'https://api.github.com/repos/' + $repo + '/commits?per_page=5'
         # Use WebClient with explicit UTF-8 to correctly decode Korean/CJK commit messages
         $wc   = New-Object System.Net.WebClient
         $wc.Encoding = [System.Text.Encoding]::UTF8
