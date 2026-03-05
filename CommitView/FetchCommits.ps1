@@ -78,9 +78,10 @@ foreach ($repo in $configuredRepos) {
         $name    = ($repo -split '/')[1]
         $ghUrl   = 'https://github.com/' + $repo
         foreach ($c in $commits) {
-            $msg = ($c.commit.message -split "`n")[0].Trim()
-            $rel = Get-RelativeTime $c.commit.author.date
-            $Rows.Add(@{ name=$name; msg=$msg; time=$rel; url=$ghUrl })
+            $msg    = ($c.commit.message -split "`n")[0].Trim()
+            $rel    = Get-RelativeTime $c.commit.author.date
+            $author = if ($c.author -and $c.author.login) { $c.author.login } else { $c.commit.author.name }
+            $Rows.Add(@{ name=$name; msg=$msg; time=$rel; url=$ghUrl; author=$author })
         }
         $successCount++
         L "  OK  $($commits.Count) commits"
@@ -101,18 +102,29 @@ if ($successCount -lt $configuredRepos.Count) {
 # ------------------------------------------------------------------
 # Layout constants
 # ------------------------------------------------------------------
-$WW        = 500
-$Padding   = 14
-$RowH      = 26
-$RepoColW  = 110
-$MsgColX   = 132   # Padding + RepoColW + 8
-$TimeColW  = 68
-$TimeColX  = $WW - $Padding - $TimeColW   # = 418 (우측 고정)
-$MsgColW   = $TimeColX - $MsgColX - 24   # gap 24px → = 262
-$BtnAreaH  = 28
+$WW          = 500
+$Padding     = 14
+$HeaderH     = 20          # repo section header height
+$RowH        = 26
+$AuthorColW  = 90
+$MsgColX     = $Padding + $AuthorColW + 8   # = 112
+$TimeColW    = 68
+$TimeColX    = $WW - $Padding - $TimeColW   # = 418
+$MsgColW     = $TimeColX - $MsgColX - 8    # = 298
+$BtnAreaH    = 28
 
-$activeRows = $Rows.Count
-$WH = $Padding * 2 + $activeRows * $RowH + $BtnAreaH
+# Group rows by repo (order preserved; repos are fetched sequentially)
+$Groups   = [System.Collections.Generic.List[hashtable]]::new()
+$curGroup = $null
+foreach ($row in $Rows) {
+    if ($null -eq $curGroup -or $curGroup.name -ne $row.name) {
+        $curGroup = @{ name=$row.name; url=$row.url; rows=[System.Collections.Generic.List[hashtable]]::new() }
+        $Groups.Add($curGroup)
+    }
+    $curGroup.rows.Add($row)
+}
+
+$WH = $Padding * 2 + $Groups.Count * $HeaderH + $Rows.Count * $RowH + $BtnAreaH
 
 $cBG     = '13,17,23,240'
 $cStroke = '48,54,61,255'
@@ -142,63 +154,94 @@ W 'Y=0'
 W ('Shape=Rectangle 0,0,' + $WW + ',' + $WH + ',8 | Fill Color ' + $cBG + ' | StrokeWidth 1 | Stroke Color ' + $cStroke)
 W ''
 
-# Commit rows
-$prevName = ''
-for ($i = 0; $i -lt $Rows.Count; $i++) {
-    $row    = $Rows[$i]
-    $name   = $row.name
-    $msg    = $row.msg
-    $time   = $row.time
-    $y      = $Padding + $i * $RowH
-    $action = '["' + $row.url + '"]'
+# Repo sections: header + commits
+$gi  = 0   # group index (for unique meter names)
+$ri  = 0   # row index
+$y   = $Padding
+$lineStartX = $Padding + 130 + 8   # line begins after text area
+$lineEndX   = $WW - $Padding
 
-    # Dim repeated repo names for visual grouping
-    $nameColor = if ($name -eq $prevName) { '100,100,100,180' } else { '200,200,200,255' }
-    $prevName  = $name
+foreach ($g in $Groups) {
+    # -- Section header: repo name (left) + divider line (right) --
+    $lineY = $y + [int]($HeaderH / 2)
 
-    W "[MRow${i}Name]"
+    W "[MHdr${gi}Line]"
+    W 'Meter=Shape'
+    W "X=$lineStartX"
+    W "Y=$lineY"
+    W ('Shape=Line 0,0,' + ($lineEndX - $lineStartX) + ',0 | StrokeWidth 1 | Stroke Color 48,54,61,255')
+    W ''
+
+    W "[MHdr${gi}Name]"
     W 'Meter=String'
     W "X=$Padding"
     W "Y=$y"
-    W "W=$RepoColW"
-    W "H=$RowH"
-    W "Text=$name"
-    W "FontColor=$nameColor"
-    W 'FontSize=10'
-    W 'FontFace=Segoe UI'
-    W 'AntiAlias=1'
-    W 'ClipString=2'
-    W "LeftMouseUpAction=$action"
-    W ''
-
-    W "[MRow${i}Msg]"
-    W 'Meter=String'
-    W "X=$MsgColX"
-    W "Y=$y"
-    W "W=$MsgColW"
-    W "H=$RowH"
-    W "Text=$msg"
-    W 'FontColor=139,148,158,255'
-    W 'FontSize=10'
-    W 'FontFace=Segoe UI'
-    W 'AntiAlias=1'
-    W 'ClipString=2'
-    W "LeftMouseUpAction=$action"
-    W ''
-
-    W "[MRow${i}Time]"
-    W 'Meter=String'
-    W "X=$TimeColX"
-    W "Y=$y"
-    W "W=$TimeColW"
-    W "H=$RowH"
-    W "Text=$time"
-    W 'FontColor=88,96,105,200'
+    W 'W=130'
+    W "H=$HeaderH"
+    W "Text=$($g.name)"
+    W 'FontColor=175,185,195,255'
     W 'FontSize=9'
     W 'FontFace=Segoe UI'
+    W 'StringStyle=Bold'
     W 'AntiAlias=1'
-    W "LeftMouseUpAction=$action"
+    W ('LeftMouseUpAction=["' + $g.url + '"]')
     W ''
+
+    $y += $HeaderH
+
+    # -- Commit rows for this repo --
+    foreach ($row in $g.rows) {
+        $action = '["' + $row.url + '"]'
+
+        W "[MRow${ri}Author]"
+        W 'Meter=String'
+        W "X=$Padding"
+        W "Y=$y"
+        W "W=$AuthorColW"
+        W "H=$RowH"
+        W "Text=$($row.author)"
+        W 'FontColor=140,150,160,255'
+        W 'FontSize=10'
+        W 'FontFace=Segoe UI'
+        W 'AntiAlias=1'
+        W 'ClipString=2'
+        W "LeftMouseUpAction=$action"
+        W ''
+
+        W "[MRow${ri}Msg]"
+        W 'Meter=String'
+        W "X=$MsgColX"
+        W "Y=$y"
+        W "W=$MsgColW"
+        W "H=$RowH"
+        W "Text=$($row.msg)"
+        W 'FontColor=139,148,158,255'
+        W 'FontSize=10'
+        W 'FontFace=Segoe UI'
+        W 'AntiAlias=1'
+        W 'ClipString=2'
+        W "LeftMouseUpAction=$action"
+        W ''
+
+        W "[MRow${ri}Time]"
+        W 'Meter=String'
+        W "X=$TimeColX"
+        W "Y=$y"
+        W "W=$TimeColW"
+        W "H=$RowH"
+        W "Text=$($row.time)"
+        W 'FontColor=88,96,105,200'
+        W 'FontSize=9'
+        W 'FontFace=Segoe UI'
+        W 'AntiAlias=1'
+        W "LeftMouseUpAction=$action"
+        W ''
+
+        $y += $RowH
+        $ri++
+    }
+
+    $gi++
 }
 
 # Auto-refresh measure (hidden, fires every AutoRefreshMin minutes)
@@ -212,7 +255,7 @@ if ($AutoRefreshMin -ge 1) {
 }
 
 # Icon buttons - bottom-left
-$ry  = $Padding + $activeRows * $RowH + [int](($BtnAreaH - 20) / 2)
+$ry  = $y + [int](($BtnAreaH - 20) / 2)
 $rix = $Padding + 26
 
 W '[MSettings]'
@@ -242,7 +285,7 @@ W ''
 # ------------------------------------------------------------------
 $content = [string]::Join("`r`n", $lines)
 [System.IO.File]::WriteAllText($OutputIni, $content, [System.Text.Encoding]::Unicode)
-L ('Saved: ' + $OutputIni + '  rows=' + $activeRows + '  WH=' + $WH)
+L ('Saved: ' + $OutputIni + '  groups=' + $Groups.Count + '  rows=' + $Rows.Count + '  WH=' + $WH)
 
 # ------------------------------------------------------------------
 # Trigger Rainmeter skin refresh
