@@ -16,5 +16,9 @@ HISTORY.md
 # Temporary utility scripts
 create_issues.ps1
 
+# Debugging images
+image.png
+test1.png
+
 # Generated exports
 README.pdf
