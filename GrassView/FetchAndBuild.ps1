@@ -24,6 +24,7 @@ L '=== GitHub Grass v1.0 ==='
 # ------------------------------------------------------------------
 $Username = ''; $Token = ''; $Weeks = 52; $CellSize = 11
 $CellGap  = 2;  $Padding = 14; $Theme = 'Green'
+$Repo1 = ''; $Repo2 = ''; $Repo3 = ''
 
 $sf = Join-Path (Split-Path $SkinPath -Parent) 'Settings.inc'
 if (Test-Path $sf) {
@@ -35,6 +36,9 @@ if (Test-Path $sf) {
         if ($line -match '^CellGap\s*=\s*(\d+)')        { $CellGap  = [int]$Matches[1] }
         if ($line -match '^Padding\s*=\s*(\d+)')        { $Padding  = [int]$Matches[1] }
         if ($line -match '^ColorTheme\s*=\s*(.+)$')     { $Theme    = $Matches[1].Trim() }
+        if ($line -match '^Repo1\s*=\s*(.+)$')          { $Repo1    = $Matches[1].Trim() }
+        if ($line -match '^Repo2\s*=\s*(.+)$')          { $Repo2    = $Matches[1].Trim() }
+        if ($line -match '^Repo3\s*=\s*(.+)$')          { $Repo3    = $Matches[1].Trim() }
     }
     L 'Settings.inc loaded'
 } else {
@@ -133,6 +137,32 @@ foreach ($ds in ($Map.Keys | Sort-Object)) {
     } else { $runStreak = 0 }
 }
 L "Streak: current=$curStreak  best=$longestStreak"
+
+# ------------------------------------------------------------------
+# Star count for configured repos
+# ------------------------------------------------------------------
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+$TotalStars     = -1
+$configuredRepos = @($Repo1, $Repo2, $Repo3) | Where-Object { $_ -ne '' }
+if ($configuredRepos.Count -gt 0) {
+    $TotalStars = 0
+    foreach ($repo in $configuredRepos) {
+        try {
+            $wc = New-Object System.Net.WebClient
+            $wc.Encoding = [System.Text.Encoding]::UTF8
+            $wc.Headers['Authorization'] = "Bearer $Token"
+            $wc.Headers['User-Agent']    = 'Rainmeter-GitHubGrass/1.0'
+            $rd = ($wc.DownloadString('https://api.github.com/repos/' + $repo)) | ConvertFrom-Json
+            $TotalStars += [int]$rd.stargazers_count
+            L "Stars: $repo = $($rd.stargazers_count)"
+        } catch {
+            L ("Stars fetch failed ($repo): " + $_.Exception.Message)
+            $TotalStars = -1
+            break
+        }
+    }
+}
+L "TotalStars=$TotalStars"
 
 # ------------------------------------------------------------------
 # Layout calculations
@@ -438,6 +468,28 @@ W "FontSize=8"
 W "FontFace=Segoe UI"
 W "AntiAlias=1"
 W ""
+
+# Star count (right-aligned in legend row)
+if ($TotalStars -ge 0) {
+    $starW    = 80
+    $starX    = $WW - $Padding - $starW
+    $starText = [string]::Format('{0:N0}', $TotalStars)
+    $starChar = [char]0x2605
+    W "[MStarCount]"
+    W "Meter=String"
+    W "X=$starX"
+    W "Y=$legY"
+    W "W=$starW"
+    W "H=$($LegendH - 4)"
+    W ("Text=" + $starChar + " " + $starText)
+    W "FontColor=210,175,55,220"
+    W "FontSize=8"
+    W "FontFace=Segoe UI"
+    W "AntiAlias=1"
+    W "StringAlign=Right"
+    W ("ToolTipText=Total stars: " + ($configuredRepos -join ', '))
+    W ""
+}
 
 # Save with UTF-8 BOM
 $content = [string]::Join("`r`n", $lines)
