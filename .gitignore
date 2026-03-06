@@ -4,8 +4,10 @@ Settings.inc
 # Auto-generated files
 GrassView.ini
 CommitView.ini
+IssueView.ini
 debug.log
 debug_commits.log
+debug_issues.log
 
 # Dev history & local config
 HISTORY.md

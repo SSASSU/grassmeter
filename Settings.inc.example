@@ -25,6 +25,12 @@ Padding=14
 ; Weeks to display (52 = 1 year, 26 = 6 months)
 WeeksToShow=52
 
+; ── CommitView / IssueView repos ──────────────────────────────────
+; Format: owner/repo  (up to 3 repos)
+Repo1=your_username/your_repo
+Repo2=
+Repo3=
+
 ; ── Opacity ───────────────────────────────────────────────────────
 ; Background opacity (0 = transparent, 255 = solid)
 Opacity=220

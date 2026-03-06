@@ -104,6 +104,37 @@ foreach ($w in $Cal.weeks) {
 L "Max daily commits=$Max"
 
 # ------------------------------------------------------------------
+# Streak calculation
+# ------------------------------------------------------------------
+$todayStr = (Get-Date).Date.ToString('yyyy-MM-dd')
+
+# Current streak: count consecutive days with contributions, backward from today
+# If today has no contributions, streak may still be alive from yesterday
+$curStreak = 0
+$chkDate   = (Get-Date).Date
+if (-not $Map.ContainsKey($todayStr) -or $Map[$todayStr] -eq 0) {
+    $chkDate = $chkDate.AddDays(-1)
+}
+while ($true) {
+    $ds = $chkDate.ToString('yyyy-MM-dd')
+    if ($Map.ContainsKey($ds) -and $Map[$ds] -gt 0) {
+        $curStreak++
+        $chkDate = $chkDate.AddDays(-1)
+    } else { break }
+}
+
+# Longest streak from all fetched data
+$longestStreak = 0
+$runStreak     = 0
+foreach ($ds in ($Map.Keys | Sort-Object)) {
+    if ($Map[$ds] -gt 0) {
+        $runStreak++
+        if ($runStreak -gt $longestStreak) { $longestStreak = $runStreak }
+    } else { $runStreak = 0 }
+}
+L "Streak: current=$curStreak  best=$longestStreak"
+
+# ------------------------------------------------------------------
 # Layout calculations
 # ------------------------------------------------------------------
 $Step    = $CellSize + $CellGap
@@ -247,15 +278,24 @@ for ($c = 0; $c -lt $Weeks; $c++) {
             else                   { $clr = $cL4 }
         }
 
-        $x   = $OX + $c * $Step
-        $y   = $OY + $r * $Step
-        $tip = $cell.date + ": " + $cnt + " contributions"
+        $x        = $OX + $c * $Step
+        $y        = $OY + $r * $Step
+        $diffDays = [int]((Get-Date).Date - (Get-Date $cell.date).Date).TotalDays
+        if     ($cell.future)        { $tipDate = $cell.date }
+        elseif ($diffDays -eq 0)     { $tipDate = "Today" }
+        elseif ($diffDays -eq 1)     { $tipDate = "Yesterday" }
+        else                         { $tipDate = "$diffDays days ago" }
+        $tip = "$tipDate  -  $cnt contributions"
 
         W "[MC$idx]"
         W "Meter=Shape"
         W "X=$x"
         W "Y=$y"
-        W ("Shape=Rectangle 0,0," + $CellSize + "," + $CellSize + ",2 | Fill Color " + $clr + " | StrokeWidth 0")
+        if ($cell.date -eq $todayStr) {
+            W ("Shape=Rectangle 0,0," + $CellSize + "," + $CellSize + ",2 | Fill Color " + $clr + " | StrokeWidth 1.5 | Stroke Color 200,200,200,180")
+        } else {
+            W ("Shape=Rectangle 0,0," + $CellSize + "," + $CellSize + ",2 | Fill Color " + $clr + " | StrokeWidth 0")
+        }
         W "ToolTipText=$tip"
         W ""
         $idx++
@@ -275,6 +315,22 @@ W "FontColor=139,148,158,255"
 W "FontSize=10"
 W "FontFace=Segoe UI"
 W "AntiAlias=1"
+W ""
+
+# Streak counter (right-aligned, same row as total)
+$streakText = if ($curStreak -gt 0) { "$curStreak day streak  |  Best: $longestStreak days" } else { "Best: $longestStreak days" }
+W "[MStreak]"
+W "Meter=String"
+W "X=$OX"
+W "Y=$ty"
+W "W=$GW"
+W "H=$TotalH"
+W "Text=$streakText"
+W "FontColor=139,148,158,200"
+W "FontSize=10"
+W "FontFace=Segoe UI"
+W "AntiAlias=1"
+W "StringAlign=Right"
 W ""
 
 # Period buttons (right-aligned, below total text)
