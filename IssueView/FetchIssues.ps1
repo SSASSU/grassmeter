@@ -123,11 +123,14 @@ foreach ($repo in $configuredRepos) {
 
 L "Total: issues=$totalIssues  PRs=$totalPRs  success=$successCount/$($configuredRepos.Count)"
 
-# Guard: partial failure -> keep existing INI
-if ($successCount -lt $configuredRepos.Count -and (Test-Path $OutputIni)) {
-    L 'WARNING: some repos failed - keeping existing IssueView.ini unchanged'
+# Guard: keep old INI only if ALL repos failed (network/token issue)
+if ($successCount -eq 0 -and $configuredRepos.Count -gt 0) {
+    L 'WARNING: all repos failed - keeping existing IssueView.ini unchanged'
     L '=== DONE (no update) ==='
     exit 0
+}
+if ($successCount -lt $configuredRepos.Count) {
+    L "WARNING: $($configuredRepos.Count - $successCount) repo(s) failed - regenerating with available data"
 }
 
 # ------------------------------------------------------------------
@@ -345,10 +348,12 @@ W 'ToolTipText=Click to reload issues'
 W ''
 
 # ------------------------------------------------------------------
-# Save with Unicode (UTF-16 LE) encoding, same as CommitView
+# Save - write to temp then rename atomically to prevent partial reads
 # ------------------------------------------------------------------
 $content = [string]::Join("`r`n", $lines)
-[System.IO.File]::WriteAllText($OutputIni, $content, [System.Text.Encoding]::Unicode)
+$tempIni = $OutputIni + '.tmp'
+[System.IO.File]::WriteAllText($tempIni, $content, [System.Text.Encoding]::Unicode)
+Move-Item -Path $tempIni -Destination $OutputIni -Force
 L ('Saved: ' + $OutputIni + '  groups=' + $Groups.Count + '  rows=' + $ri + '  WH=' + $WH)
 
 # ------------------------------------------------------------------
