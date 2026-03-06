@@ -170,7 +170,7 @@ L "TotalStars=$TotalStars"
 $Step    = $CellSize + $CellGap
 $DLW     = 28
 $MonthH  = 22
-$TotalH  = 24
+$TotalH  = 44   # 20px contributions line + 20px streak line + 4px gap
 $BtnRowH  = 26
 $LegendH  = 24   # bottom row: icons (left) + Less/More (center) + star (right)
 $GW      = $Weeks * $Step - $CellGap
@@ -339,7 +339,7 @@ W "Meter=String"
 W "X=$OX"
 W "Y=$ty"
 W "W=$GW"
-W "H=$TotalH"
+W "H=20"
 W ("Text=" + $Total + " contributions in the last " + $Weeks + " weeks")
 W "FontColor=139,148,158,255"
 W "FontSize=10"
@@ -347,20 +347,19 @@ W "FontFace=Segoe UI"
 W "AntiAlias=1"
 W ""
 
-# Streak counter (right-aligned, same row as total)
+# Streak counter - own line below total, left-aligned with settings button
 $streakText = if ($curStreak -gt 0) { "$curStreak day streak  |  Best: $longestStreak days" } else { "Best: $longestStreak days" }
 W "[MStreak]"
 W "Meter=String"
-W "X=$OX"
-W "Y=$ty"
-W "W=$GW"
-W "H=$TotalH"
+W "X=$Padding"
+W "Y=$($ty + 20)"
+W "W=$($WW - $Padding * 2)"
+W "H=20"
 W "Text=$streakText"
 W "FontColor=139,148,158,200"
 W "FontSize=10"
 W "FontFace=Segoe UI"
 W "AntiAlias=1"
-W "StringAlign=Right"
 W ""
 
 # Period buttons (right-aligned, below total text)
