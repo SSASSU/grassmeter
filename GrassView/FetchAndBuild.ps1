@@ -192,9 +192,8 @@ $PBtnW   = 26
 $PBtnGap = 6
 $PTotalW = $Periods.Count * $PBtnW + ($Periods.Count - 1) * $PBtnGap
 
-# Ensure widget is wide enough for period buttons
-$MinWW = $Padding * 2 + $DLW + $PTotalW + 20
-if ($WW -lt $MinWW) { $WW = $MinWW }
+$ContentW = [Math]::Max($GW, $PTotalW)
+$WW       = $Padding * 2 + $DLW + $ContentW
 
 L "Widget size: ${WW}x${WH}"
 
@@ -364,7 +363,7 @@ W ""
 
 # Period buttons (right-aligned, below total text)
 $bby = $OY + $GH + $TotalH + 4
-$bbx = $WW - $Padding - $PTotalW
+$bbx = $OX + $ContentW - $PTotalW
 $pi  = 0
 foreach ($p in $Periods) {
     $pl  = $p.label; $pw = $p.weeks
