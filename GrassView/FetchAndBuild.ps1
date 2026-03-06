@@ -331,38 +331,8 @@ for ($c = 0; $c -lt $Weeks; $c++) {
     }
 }
 
-# Total contributions text
-$ty = $OY + $GH + 6
-W "[MTotal]"
-W "Meter=String"
-W "X=$Padding"
-W "Y=$ty"
-W "W=$($WW - $Padding * 2)"
-W "H=20"
-W ("Text=" + $Total + " contributions in the last " + $Weeks + " weeks")
-W "FontColor=139,148,158,255"
-W "FontSize=10"
-W "FontFace=Segoe UI"
-W "AntiAlias=1"
-W ""
-
-# Streak counter - own line below total, left-aligned with settings button
-$streakText = if ($curStreak -gt 0) { "$curStreak day streak  |  Best: $longestStreak days" } else { "Best: $longestStreak days" }
-W "[MStreak]"
-W "Meter=String"
-W "X=$Padding"
-W "Y=$($ty + 20)"
-W "W=$($WW - $Padding * 2)"
-W "H=20"
-W "Text=$streakText"
-W "FontColor=139,148,158,200"
-W "FontSize=10"
-W "FontFace=Segoe UI"
-W "AntiAlias=1"
-W ""
-
-# Period buttons (right-aligned, below total text)
-$bby = $OY + $GH + $TotalH + 4
+# Period buttons (right-aligned, directly below grass grid)
+$bby = $OY + $GH + 4
 $bbx = $OX + $ContentW - $PTotalW
 $pi  = 0
 foreach ($p in $Periods) {
@@ -391,6 +361,36 @@ foreach ($p in $Periods) {
     $pi++
 }
 
+# Total contributions text (below period buttons)
+$ty = $bby + $BtnRowH + 6
+W "[MTotal]"
+W "Meter=String"
+W "X=$Padding"
+W "Y=$ty"
+W "W=$($WW - $Padding * 2)"
+W "H=20"
+W ("Text=" + $Total + " contributions in the last " + $Weeks + " weeks")
+W "FontColor=139,148,158,255"
+W "FontSize=10"
+W "FontFace=Segoe UI"
+W "AntiAlias=1"
+W ""
+
+# Streak counter - own line below total, left-aligned with settings button
+$streakText = if ($curStreak -gt 0) { "$curStreak day streak  |  Best: $longestStreak days" } else { "Best: $longestStreak days" }
+W "[MStreak]"
+W "Meter=String"
+W "X=$Padding"
+W "Y=$($ty + 20)"
+W "W=$($WW - $Padding * 2)"
+W "H=20"
+W "Text=$streakText"
+W "FontColor=139,148,158,200"
+W "FontSize=10"
+W "FontFace=Segoe UI"
+W "AntiAlias=1"
+W ""
+
 # Bottom row: icons (left) + Less/More legend (center) + star (right)
 # All three elements share the same $legY row
 $legCS      = [Math]::Min($CellSize, 10)
@@ -399,7 +399,7 @@ $legTW      = 26
 $legCellsW  = 5 * $legCS + 4 * $legCG
 $legTotalW  = $legTW + 4 + $legCellsW + 4 + $legTW
 $legX       = [int](($WW - $legTotalW) / 2)
-$legY       = $bby + $BtnRowH + 2
+$legY       = $ty + $TotalH
 $legCY      = $legY + [int](($LegendH - $legCS) / 2)
 $legColors  = @($cL0, $cL1, $cL2, $cL3, $cL4)
 
