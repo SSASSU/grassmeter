@@ -125,7 +125,7 @@ $cboTheme = New-Object System.Windows.Forms.ComboBox
 $cboTheme.DropDownStyle = 'DropDownList'
 $cboTheme.Left = 120; $cboTheme.Top = 7; $cboTheme.Width = 140
 $cboTheme.BackColor = $clrInput; $cboTheme.ForeColor = $clrText; $cboTheme.FlatStyle = 'Flat'
-@('Green','Purple','Blue','Red','Orange','Pink','Mono','Mint','Light') | ForEach-Object { $cboTheme.Items.Add($_) | Out-Null }
+@('Green','Purple','Blue','Red','Orange','Pink','Mono','Mint','Yellow','Cyan','Light') | ForEach-Object { $cboTheme.Items.Add($_) | Out-Null }
 $idx = $cboTheme.Items.IndexOf($cfg['ColorTheme']); if ($idx -ge 0) { $cboTheme.SelectedIndex = $idx } else { $cboTheme.SelectedIndex = 0 }
 $pApp.Controls.Add($cboTheme)
 
@@ -240,7 +240,7 @@ $btnSave.Add_Click({
 GitHubUsername=$($newCfg.GitHubUsername)
 GitHubToken=$($newCfg.GitHubToken)
 
-; Color theme: Green / Purple / Blue / Red / Orange / Pink / Mono / Mint / Light
+; Color theme: Green / Purple / Blue / Red / Orange / Pink / Mono / Mint / Yellow / Cyan / Light
 ColorTheme=$($newCfg.ColorTheme)
 
 ; Opacity (0-255, 200 = slightly transparent)
