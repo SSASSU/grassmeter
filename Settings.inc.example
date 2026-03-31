@@ -31,6 +31,10 @@ Repo1=your_username/your_repo
 Repo2=
 Repo3=
 
+; ── Auto Refresh ──────────────────────────────────────────────────
+; Auto-refresh interval in minutes (0 = disabled, recommended: 5-30)
+AutoRefreshMin=5
+
 ; ── Opacity ───────────────────────────────────────────────────────
 ; Background opacity (0 = transparent, 255 = solid)
 Opacity=220
