@@ -12,7 +12,22 @@ $Log = Join-Path $SkinPath 'debug_issues.log'
 function L($m) {
     [System.IO.File]::AppendAllText($Log, "[$(Get-Date -f HH:mm:ss)] $m`r`n", [System.Text.UTF8Encoding]::new($false))
 }
-L '=== IssueView v1.0 ==='
+L '=== IssueView v1.1 ==='
+
+# ------------------------------------------------------------------
+# Concurrent execution guard (lock file)
+# ------------------------------------------------------------------
+$LockFile = Join-Path $SkinPath 'fetch_issues.lock'
+if (Test-Path $LockFile) {
+    $lockAge = (Get-Date) - (Get-Item $LockFile).LastWriteTime
+    if ($lockAge.TotalMinutes -lt 3) {
+        L 'WARNING: another instance is running (lock file exists) - skipping'
+        exit 0
+    }
+    L 'WARNING: stale lock file detected - removing'
+}
+[System.IO.File]::WriteAllText($LockFile, (Get-Date).ToString(), [System.Text.UTF8Encoding]::new($false))
+try {
 
 $OutputIni = Join-Path $SkinPath 'IssueView.ini'
 
@@ -102,7 +117,7 @@ foreach ($repo in $configuredRepos) {
             $isPR = $item.PSObject.Properties.Name -contains 'pull_request'
             $row  = @{
                 num   = $item.number
-                title = $item.title
+                title = ($item.title -replace '#', '＃')
                 time  = Get-RelativeTime $item.created_at
                 url   = $item.html_url
                 type  = if ($isPR) { 'PR' } else { 'I' }
@@ -361,20 +376,33 @@ W ''
 # ------------------------------------------------------------------
 $content = [string]::Join("`r`n", $lines)
 $tempIni = $OutputIni + '.tmp'
-[System.IO.File]::WriteAllText($tempIni, $content, [System.Text.Encoding]::Unicode)
-Move-Item -Path $tempIni -Destination $OutputIni -Force
-L ('Saved: ' + $OutputIni + '  groups=' + $Groups.Count + '  rows=' + $ri + '  WH=' + $WH)
+$savedOk = $false
+try {
+    [System.IO.File]::WriteAllText($tempIni, $content, [System.Text.Encoding]::Unicode)
+    Move-Item -Path $tempIni -Destination $OutputIni -Force -ErrorAction Stop
+    $savedOk = $true
+    L ('Saved: ' + $OutputIni + '  groups=' + $Groups.Count + '  rows=' + $ri + '  WH=' + $WH)
+} catch {
+    L ('ERROR: failed to save IssueView.ini - ' + $_.Exception.Message)
+    if (Test-Path $tempIni) { Remove-Item $tempIni -Force -ErrorAction SilentlyContinue }
+}
 
 # ------------------------------------------------------------------
-# Trigger Rainmeter skin refresh
+# Trigger Rainmeter skin refresh (only if save succeeded)
 # ------------------------------------------------------------------
-$config  = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
-$iniFile = 'IssueView.ini'
-$rmExe   = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
-if (-not (Test-Path $rmExe)) { $rmExe = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }
-if (Test-Path $rmExe) {
-    Start-Process $rmExe -ArgumentList "!Refresh `"$config`" `"$iniFile`""
-    L "Rainmeter refresh triggered: $config\$iniFile"
-} else { L 'WARNING: Rainmeter.exe not found' }
+if ($savedOk) {
+    $config  = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
+    $iniFile = 'IssueView.ini'
+    $rmExe   = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
+    if (-not (Test-Path $rmExe)) { $rmExe = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }
+    if (Test-Path $rmExe) {
+        Start-Process $rmExe -ArgumentList "!Refresh `"$config`" `"$iniFile`"" -ErrorAction SilentlyContinue
+        L "Rainmeter refresh triggered: $config\$iniFile"
+    } else { L 'WARNING: Rainmeter.exe not found' }
+}
 
 L '=== DONE ==='
+} finally {
+    # Always release the lock
+    Remove-Item $LockFile -Force -ErrorAction SilentlyContinue
+}

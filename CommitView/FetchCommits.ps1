@@ -12,7 +12,22 @@ $Log = Join-Path $SkinPath 'debug_commits.log'
 function L($m) {
     [System.IO.File]::AppendAllText($Log, "[$(Get-Date -f HH:mm:ss)] $m`r`n", [System.Text.UTF8Encoding]::new($false))
 }
-L '=== CommitView v1.2 ==='
+L '=== CommitView v1.3 ==='
+
+# ------------------------------------------------------------------
+# Concurrent execution guard (lock file)
+# ------------------------------------------------------------------
+$LockFile = Join-Path $SkinPath 'fetch_commits.lock'
+if (Test-Path $LockFile) {
+    $lockAge = (Get-Date) - (Get-Item $LockFile).LastWriteTime
+    if ($lockAge.TotalMinutes -lt 3) {
+        L 'WARNING: another instance is running (lock file exists) - skipping'
+        exit 0
+    }
+    L 'WARNING: stale lock file detected - removing'
+}
+[System.IO.File]::WriteAllText($LockFile, (Get-Date).ToString(), [System.Text.UTF8Encoding]::new($false))
+try {
 
 $OutputIni = Join-Path $SkinPath 'CommitView.ini'
 
@@ -100,7 +115,7 @@ foreach ($repo in $configuredRepos) {
         $name    = ($repo -split '/')[1]
         $ghUrl   = 'https://github.com/' + $repo
         foreach ($c in $commits) {
-            $msg    = ($c.commit.message -split "`n")[0].Trim()
+            $msg    = ($c.commit.message -split "`n")[0].Trim() -replace '#', '＃'
             $rel    = Get-RelativeTime $c.commit.author.date
             $author = if ($c.author -and $c.author.login) { $c.author.login } else { $c.commit.author.name }
             $Rows.Add(@{ name=$name; msg=$msg; time=$rel; url=$ghUrl; author=$author })
@@ -316,22 +331,35 @@ W ''
 # ------------------------------------------------------------------
 $content = [string]::Join("`r`n", $lines)
 $tempIni = $OutputIni + '.tmp'
-[System.IO.File]::WriteAllText($tempIni, $content, [System.Text.Encoding]::Unicode)
-Move-Item -Path $tempIni -Destination $OutputIni -Force
-L ('Saved: ' + $OutputIni + '  groups=' + $Groups.Count + '  rows=' + $Rows.Count + '  WH=' + $WH)
+$savedOk = $false
+try {
+    [System.IO.File]::WriteAllText($tempIni, $content, [System.Text.Encoding]::Unicode)
+    Move-Item -Path $tempIni -Destination $OutputIni -Force -ErrorAction Stop
+    $savedOk = $true
+    L ('Saved: ' + $OutputIni + '  groups=' + $Groups.Count + '  rows=' + $Rows.Count + '  WH=' + $WH)
+} catch {
+    L ('ERROR: failed to save CommitView.ini - ' + $_.Exception.Message)
+    if (Test-Path $tempIni) { Remove-Item $tempIni -Force -ErrorAction SilentlyContinue }
+}
 
 # ------------------------------------------------------------------
-# Trigger Rainmeter skin refresh
+# Trigger Rainmeter skin refresh (only if save succeeded)
 # ------------------------------------------------------------------
-$config  = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
-$iniFile = 'CommitView.ini'
-$rmExe   = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
-if (-not (Test-Path $rmExe)) { $rmExe = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }
-if (Test-Path $rmExe) {
-    Start-Process $rmExe -ArgumentList "!Refresh `"$config`" `"$iniFile`""
-    L "Rainmeter refresh triggered: $config\$iniFile"
-} else {
-    L 'WARNING: Rainmeter.exe not found'
+if ($savedOk) {
+    $config  = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
+    $iniFile = 'CommitView.ini'
+    $rmExe   = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
+    if (-not (Test-Path $rmExe)) { $rmExe = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }
+    if (Test-Path $rmExe) {
+        Start-Process $rmExe -ArgumentList "!Refresh `"$config`" `"$iniFile`"" -ErrorAction SilentlyContinue
+        L "Rainmeter refresh triggered: $config\$iniFile"
+    } else {
+        L 'WARNING: Rainmeter.exe not found'
+    }
 }
 
 L '=== DONE ==='
+} finally {
+    # Always release the lock
+    Remove-Item $LockFile -Force -ErrorAction SilentlyContinue
+}
