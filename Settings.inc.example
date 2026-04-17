@@ -38,3 +38,8 @@ AutoRefreshMin=5
 ; ── Opacity ───────────────────────────────────────────────────────
 ; Background opacity (0 = transparent, 255 = solid)
 Opacity=220
+
+; ── Startup ───────────────────────────────────────────────────────
+; Run all grassmeter skins on Windows startup (1 = enabled, 0 = disabled)
+; Tip: enable this in the Settings GUI to auto-create the startup shortcut
+RunOnStartup=0

@@ -17,13 +17,87 @@ $Log = Join-Path $SkinPath 'debug.log'
 function L($m) {
     [System.IO.File]::AppendAllText($Log, "[$(Get-Date -f HH:mm:ss)] $m`r`n", [System.Text.UTF8Encoding]::new($false))
 }
+
+function Write-ErrorWidget($msg) {
+    L "WIDGET-ERROR: $msg"
+    $safeMsg = $msg -replace '#', '＃' -replace '=', '＝' -replace '\[', '［' -replace '\]', '］'
+    $eLines  = [System.Collections.Generic.List[string]]::new()
+    $eLines.Add('; GitHub Grass - Error state')
+    $eLines.Add('[Rainmeter]')
+    $eLines.Add('Update=5000')
+    $eLines.Add('AccurateText=1')
+    $eLines.Add('')
+    $eLines.Add('[MeterBG]')
+    $eLines.Add('Meter=Shape')
+    $eLines.Add('X=0')
+    $eLines.Add('Y=0')
+    $eLines.Add('Shape=Rectangle 0,0,360,76,8 | Fill Color 13,17,23,240 | StrokeWidth 1 | Stroke Color 48,54,61,255')
+    $eLines.Add('')
+    $eLines.Add('[MError]')
+    $eLines.Add('Meter=String')
+    $eLines.Add('X=14')
+    $eLines.Add('Y=12')
+    $eLines.Add('W=332')
+    $eLines.Add('H=22')
+    $eLines.Add("Text=! $safeMsg")
+    $eLines.Add('FontColor=200,80,80,255')
+    $eLines.Add('FontSize=10')
+    $eLines.Add('FontFace=Segoe UI')
+    $eLines.Add('AntiAlias=1')
+    $eLines.Add('ClipString=2')
+    $eLines.Add('')
+    $eLines.Add('[MHint]')
+    $eLines.Add('Meter=String')
+    $eLines.Add('X=14')
+    $eLines.Add('Y=32')
+    $eLines.Add('W=332')
+    $eLines.Add('H=18')
+    $eLines.Add('Text=Open Settings to fix, then click refresh')
+    $eLines.Add('FontColor=88,96,105,200')
+    $eLines.Add('FontSize=9')
+    $eLines.Add('FontFace=Segoe UI')
+    $eLines.Add('AntiAlias=1')
+    $eLines.Add('')
+    $eLines.Add('[MSettings]')
+    $eLines.Add('Meter=Image')
+    $eLines.Add('ImageName=#ROOTCONFIGPATH#@Resources\Icons\settings.png')
+    $eLines.Add('X=14')
+    $eLines.Add('Y=52')
+    $eLines.Add('W=20')
+    $eLines.Add('H=20')
+    $eLines.Add('LeftMouseUpAction=["wscript.exe" "#ROOTCONFIGPATH#launch_settings.vbs"]')
+    $eLines.Add('ToolTipText=Open Settings')
+    $eLines.Add('')
+    $eLines.Add('[MRefresh]')
+    $eLines.Add('Meter=Image')
+    $eLines.Add('ImageName=#ROOTCONFIGPATH#@Resources\Icons\refresh.png')
+    $eLines.Add('X=40')
+    $eLines.Add('Y=52')
+    $eLines.Add('W=20')
+    $eLines.Add('H=20')
+    $eLines.Add('LeftMouseUpAction=["wscript.exe" "#CURRENTPATH#launcher.vbs"]')
+    $eLines.Add('ToolTipText=Click to reload')
+    $eLines.Add('')
+    $tempIni = $OutputIni + '.tmp'
+    try {
+        [System.IO.File]::WriteAllText($tempIni, [string]::Join("`r`n", $eLines), [System.Text.Encoding]::Unicode)
+        Move-Item -Path $tempIni -Destination $OutputIni -Force
+    } catch { L "ERROR: could not write error widget: $_" }
+    $config = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
+    $iniFile = [System.IO.Path]::GetFileName($OutputIni)
+    $rmExe   = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
+    if (-not (Test-Path $rmExe)) { $rmExe = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }
+    if (Test-Path $rmExe) { Start-Process $rmExe -ArgumentList "!Refresh `"$config`" `"$iniFile`"" }
+    exit 1
+}
+
 L '=== GitHub Grass v1.0 ==='
 
 # ------------------------------------------------------------------
 # Parse Settings.inc
 # ------------------------------------------------------------------
 $Username = ''; $Token = ''; $Weeks = 52; $CellSize = 11
-$CellGap  = 2;  $Padding = 14; $Theme = 'Green'; $AutoRefreshMin = 0
+$CellGap  = 2;  $Padding = 14; $Theme = 'Green'; $AutoRefreshMin = 0; $Opacity = 220
 $Repo1 = ''; $Repo2 = ''; $Repo3 = ''
 
 $sf = Join-Path (Split-Path $SkinPath -Parent) 'Settings.inc'
@@ -37,6 +111,7 @@ if (Test-Path $sf) {
         if ($line -match '^Padding\s*=\s*(\d+)')          { $Padding        = [int]$Matches[1] }
         if ($line -match '^ColorTheme\s*=\s*(.+)$')       { $Theme          = $Matches[1].Trim() }
         if ($line -match '^AutoRefreshMin\s*=\s*(\d+)$')  { $AutoRefreshMin = [int]$Matches[1] }
+        if ($line -match '^Opacity\s*=\s*(\d+)$')         { $Opacity        = [int]$Matches[1] }
         if ($line -match '^Repo1\s*=\s*(.+)$')            { $Repo1          = $Matches[1].Trim() }
         if ($line -match '^Repo2\s*=\s*(.+)$')            { $Repo2          = $Matches[1].Trim() }
         if ($line -match '^Repo3\s*=\s*(.+)$')            { $Repo3          = $Matches[1].Trim() }
@@ -58,7 +133,7 @@ if ($WeeksOverride -gt 0) {
     }
 }
 
-if ($Token -eq '' -or $Token -match '^ghp_x+$' -or $Token -eq 'ghp_your_token_here') { L 'ERROR: GitHubToken not set'; exit 1 }
+if ($Token -eq '' -or $Token -match '^ghp_x+$' -or $Token -eq 'ghp_your_token_here') { Write-ErrorWidget 'Token not set — open Settings to configure' }
 
 # Auto-detect username from token if not configured in Settings.inc
 if ($Username -eq '' -or $Username -eq 'your_username') {
@@ -80,8 +155,7 @@ if ($Username -eq '' -or $Username -eq 'your_username') {
             L "Saved username to Settings.inc"
         }
     } catch {
-        L ('Auto-detect username failed: ' + $_.Exception.Message)
-        exit 1
+        Write-ErrorWidget 'Token invalid or network error — check Settings'
     }
 }
 
@@ -99,7 +173,8 @@ elseif ($Theme -eq 'Mint')   { $cBG='13,17,23,240'; $cL0='33,38,46,255'; $cL1='0
 elseif ($Theme -eq 'Yellow') { $cBG='13,17,23,240'; $cL0='33,38,46,255'; $cL1='100,88,0,255';  $cL2='180,158,0,255';  $cL3='225,200,0,255';  $cL4='255,240,0,255'   }
 elseif ($Theme -eq 'Cyan')   { $cBG='13,17,23,240'; $cL0='33,38,46,255'; $cL1='0,65,95,255';   $cL2='0,130,180,255';  $cL3='0,200,238,255';  $cL4='60,235,255,255'  }
 elseif ($Theme -eq 'Light')  { $cBG='245,247,250,240'; $cL0='235,237,240,255'; $cL1='155,233,168,255'; $cL2='64,196,99,255'; $cL3='48,161,78,255'; $cL4='33,110,57,255' }
-L "Theme=$Theme  L0=[$cL0]  L4=[$cL4]"
+L "Theme=$Theme  L0=[$cL0]  L4=[$cL4]  Opacity=$Opacity"
+$cBG = ($cBG -replace ',\d+$', ",$Opacity")
 
 # UI palette - adapts for light vs dark backgrounds
 $isLight   = ($Theme -eq 'Light')
@@ -125,13 +200,12 @@ $Headers = @{
 L 'Calling GitHub API...'
 try {
     $R = Invoke-RestMethod -Uri 'https://api.github.com/graphql' -Method POST -Headers $Headers -Body $Body -TimeoutSec 30 -ErrorAction Stop
-    if ($R.errors) { L ("GraphQL error: " + $R.errors[0].message); exit 1 }
+    if ($R.errors) { Write-ErrorWidget ("GitHub API error: " + $R.errors[0].message) }
     $Cal   = $R.data.user.contributionsCollection.contributionCalendar
     $Total = $Cal.totalContributions
     L "API OK  total=$Total"
 } catch {
-    L ("API failed: " + $_.Exception.Message)
-    exit 1
+    Write-ErrorWidget 'GitHub API unreachable — check network or token'
 }
 
 # Build date->count map

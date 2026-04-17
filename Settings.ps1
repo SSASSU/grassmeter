@@ -27,6 +27,7 @@ $cfg = [ordered]@{
     Repo2          = ''
     Repo3          = ''
     AutoRefreshMin = '5'
+    RunOnStartup   = '0'
 }
 
 if (Test-Path $settingsFile) {
@@ -90,7 +91,7 @@ function New-SectionLabel($text, $x, $y) {
 # ------------------------------------------------------------------
 $form = New-Object System.Windows.Forms.Form
 $form.Text            = 'grassmeter Settings'
-$form.ClientSize      = New-Object System.Drawing.Size(400, 620)
+$form.ClientSize      = New-Object System.Drawing.Size(400, 690)
 $form.StartPosition   = 'CenterScreen'
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox     = $false
@@ -190,6 +191,20 @@ $pCommit.Controls.Add($lblARHint)
 $txtAR = New-TextBox $cfg['AutoRefreshMin'] 170 7 55; $pCommit.Controls.Add($txtAR)
 
 # ------------------------------------------------------------------
+# Section: Startup
+# ------------------------------------------------------------------
+$form.Controls.Add((New-SectionLabel 'Startup' 14 $py)); $py += 24
+
+$pStartup = New-Panel 10 $py 380 36; $form.Controls.Add($pStartup); $py += 44
+$chkStartup = New-Object System.Windows.Forms.CheckBox
+$chkStartup.Text      = 'Run on Windows startup'
+$chkStartup.Left      = 10; $chkStartup.Top = 8; $chkStartup.Width = 220; $chkStartup.Height = 22
+$chkStartup.Checked   = ($cfg['RunOnStartup'] -eq '1')
+$chkStartup.BackColor = [System.Drawing.Color]::Transparent
+$chkStartup.ForeColor = $clrMuted
+$pStartup.Controls.Add($chkStartup)
+
+# ------------------------------------------------------------------
 # Buttons
 # ------------------------------------------------------------------
 $py += 8
@@ -233,6 +248,7 @@ $btnSave.Add_Click({
         Repo2          = Normalize-Repo $txtRepo2.Text
         Repo3          = Normalize-Repo $txtRepo3.Text
         AutoRefreshMin = $txtAR.Text.Trim()
+        RunOnStartup   = if ($chkStartup.Checked) { '1' } else { '0' }
     }
 
     $content = @"
@@ -270,9 +286,30 @@ Repo3=$($newCfg.Repo3)
 
 ; CommitView auto-refresh interval in minutes (0 = disabled)
 AutoRefreshMin=$($newCfg.AutoRefreshMin)
+
+; Run all grassmeter skins on Windows startup (1 = enabled, 0 = disabled)
+RunOnStartup=$($newCfg.RunOnStartup)
 "@
 
     [System.IO.File]::WriteAllText($settingsFile, $content, [System.Text.UTF8Encoding]::new($true))
+
+    # Startup shortcut management
+    $startupDir   = [Environment]::GetFolderPath('Startup')
+    $shortcutPath = Join-Path $startupDir 'grassmeter.lnk'
+    $runAllVbs    = Join-Path $root 'run_all.vbs'
+    if ($chkStartup.Checked -and (Test-Path $runAllVbs)) {
+        try {
+            $wsh = New-Object -ComObject WScript.Shell
+            $sc  = $wsh.CreateShortcut($shortcutPath)
+            $sc.TargetPath       = 'wscript.exe'
+            $sc.Arguments        = "`"$runAllVbs`""
+            $sc.WorkingDirectory = $root
+            $sc.Description      = 'grassmeter - GitHub Grass for Rainmeter'
+            $sc.Save()
+        } catch {}
+    } elseif (-not $chkStartup.Checked -and (Test-Path $shortcutPath)) {
+        Remove-Item $shortcutPath -Force -ErrorAction SilentlyContinue
+    }
 
     # Refresh all three skins via their VBS launchers
     $launchers = @(

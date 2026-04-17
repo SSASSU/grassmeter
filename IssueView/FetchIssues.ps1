@@ -34,21 +34,52 @@ $OutputIni = Join-Path $SkinPath 'IssueView.ini'
 # ------------------------------------------------------------------
 # Parse Settings.inc
 # ------------------------------------------------------------------
-$Token = ''; $Repo1 = ''; $Repo2 = ''; $Repo3 = ''; $Theme = 'Green'
+$Token = ''; $Repo1 = ''; $Repo2 = ''; $Repo3 = ''; $Theme = 'Green'; $Opacity = 220
 
 $sf = Join-Path (Split-Path $SkinPath -Parent) 'Settings.inc'
 if (Test-Path $sf) {
     foreach ($line in [System.IO.File]::ReadAllLines($sf, [System.Text.UTF8Encoding]::new($true))) {
         if ($line -match '^GitHubToken\s*=\s*(.+)$')  { $Token = $Matches[1].Trim() }
         if ($line -match '^Repo1\s*=\s*(.+)$')        { $Repo1 = $Matches[1].Trim() }
-        if ($line -match '^Repo2\s*=\s*(.+)$')        { $Repo2 = $Matches[1].Trim() }
-        if ($line -match '^Repo3\s*=\s*(.+)$')        { $Repo3 = $Matches[1].Trim() }
-        if ($line -match '^ColorTheme\s*=\s*(.+)$')   { $Theme = $Matches[1].Trim() }
+        if ($line -match '^Repo2\s*=\s*(.+)$')        { $Repo2    = $Matches[1].Trim() }
+        if ($line -match '^Repo3\s*=\s*(.+)$')        { $Repo3    = $Matches[1].Trim() }
+        if ($line -match '^ColorTheme\s*=\s*(.+)$')   { $Theme    = $Matches[1].Trim() }
+        if ($line -match '^Opacity\s*=\s*(\d+)$')     { $Opacity  = [int]$Matches[1] }
     }
     L 'Settings.inc loaded'
 } else { L 'WARNING: Settings.inc not found' }
 
-if ($Token -eq '' -or $Token -match '^ghp_x+$' -or $Token -eq 'ghp_your_token_here') { L 'ERROR: GitHubToken not set'; exit 1 }
+if ($Token -eq '' -or $Token -match '^ghp_x+$' -or $Token -eq 'ghp_your_token_here') {
+    L 'ERROR: GitHubToken not set'
+    $eLines = [System.Collections.Generic.List[string]]::new()
+    foreach ($s in @(
+        '; IssueView - Error state', '[Rainmeter]', 'Update=5000', 'AccurateText=1', '',
+        '[MeterBG]', 'Meter=Shape', 'X=0', 'Y=0',
+        'Shape=Rectangle 0,0,500,76,8 | Fill Color 13,17,23,240 | StrokeWidth 1 | Stroke Color 48,54,61,255', '',
+        '[MError]', 'Meter=String', 'X=14', 'Y=12', 'W=472', 'H=22',
+        'Text=! Token not set — open Settings to configure',
+        'FontColor=200,80,80,255', 'FontSize=10', 'FontFace=Segoe UI', 'AntiAlias=1', 'ClipString=2', '',
+        '[MHint]', 'Meter=String', 'X=14', 'Y=32', 'W=472', 'H=18',
+        'Text=Open Settings to fix, then click refresh',
+        'FontColor=88,96,105,200', 'FontSize=9', 'FontFace=Segoe UI', 'AntiAlias=1', '',
+        '[MSettings]', 'Meter=Image', 'ImageName=#ROOTCONFIGPATH#@Resources\Icons\settings.png',
+        'X=14', 'Y=52', 'W=20', 'H=20',
+        'LeftMouseUpAction=["wscript.exe" "#ROOTCONFIGPATH#launch_settings.vbs"]', 'ToolTipText=Open Settings', '',
+        '[MRefresh]', 'Meter=Image', 'ImageName=#ROOTCONFIGPATH#@Resources\Icons\refresh.png',
+        'X=40', 'Y=52', 'W=20', 'H=20',
+        'LeftMouseUpAction=["wscript.exe" "#CURRENTPATH#launcher_issues.vbs"]', 'ToolTipText=Click to reload', ''
+    )) { $eLines.Add($s) }
+    $tmpIni = $OutputIni + '.tmp'
+    try {
+        [System.IO.File]::WriteAllText($tmpIni, [string]::Join("`r`n", $eLines), [System.Text.Encoding]::Unicode)
+        Move-Item -Path $tmpIni -Destination $OutputIni -Force
+    } catch {}
+    $cfg2 = (Split-Path (Split-Path $SkinPath -Parent) -Leaf) + '\' + (Split-Path $SkinPath -Leaf)
+    $rm2  = "$env:ProgramFiles\Rainmeter\Rainmeter.exe"
+    if (-not (Test-Path $rm2)) { $rm2 = "${env:ProgramFiles(x86)}\Rainmeter\Rainmeter.exe" }
+    if (Test-Path $rm2) { Start-Process $rm2 -ArgumentList "!Refresh `"$cfg2`" `"IssueView.ini`"" -ErrorAction SilentlyContinue }
+    exit 1
+}
 
 # ------------------------------------------------------------------
 # Theme colors
@@ -117,7 +148,7 @@ foreach ($repo in $configuredRepos) {
             $isPR = $item.PSObject.Properties.Name -contains 'pull_request'
             $row  = @{
                 num   = $item.number
-                title = ($item.title -replace '#', '＃')
+                title = ($item.title -replace '#', '＃' -replace '=', '＝' -replace '\[', '［' -replace '\]', '］')
                 time  = Get-RelativeTime $item.created_at
                 url   = $item.html_url
                 type  = if ($isPR) { 'PR' } else { 'I' }
@@ -175,6 +206,7 @@ $lineEndX  = $WW - $Padding
 
 $isLight   = ($Theme -eq 'Light')
 $cBG       = if ($isLight) { '245,247,250,240' } else { '13,17,23,240' }
+$cBG       = ($cBG -replace ',\d+$', ",$Opacity")
 $cStroke   = if ($isLight) { '208,215,222,255' } else { '48,54,61,255' }
 $cTextName = if ($isLight) { '36,41,47,255'    } else { '175,185,195,255' }
 $cTextBody = if ($isLight) { '57,62,68,255'    } else { '139,148,158,255' }
